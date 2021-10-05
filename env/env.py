@@ -14,8 +14,8 @@ class Environment():
 		self.msr_addr = "1553"
 
 		#config
-		self.window_size = 11
-		self.period = 0.01  # s
+		self.window_size = 21
+		self.period = 0.05  # s
 		self.server_ip = "10.150.21.207"
 		self.server_port = 9999
 		self.app_name = "memcached"
@@ -263,7 +263,7 @@ class Environment():
 		diff_time = self.l_time[-1] - self.l_time[-(1+step)]
 		for cpu in range(self.max_core):
 			diff_app_usage = self.ll_accu_app_usage[-1][cpu] - self.ll_accu_app_usage[-(1+step)][cpu] #ns
-			freq_times = self.l_core_freq[cpu] / self.l_freq[0] / 0.75
+			freq_times = self.l_core_freq[cpu] / self.l_freq[0] 
 			cur_app_usage = round(freq_times * diff_app_usage / diff_time / 1000 / 1000 / 1000, 4) 
 			l_app_usage.append(cur_app_usage)
 

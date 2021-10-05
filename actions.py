@@ -24,9 +24,14 @@ def alloc_P(cores,net_name):
 	return
 
 def change_freq_to(freq,core):
-	cpufreq = cpuFreq()
-	cpufreq.set_frequencies(freq,core)
-	
+	#subprocess.call("echo "+str(freq)+ " > " + "/sys/devices/system/cpu/cpu"+str(core)+"/cpufreq/scaling_setspeed",shell=True)
+	#cpufreq = cpuFreq()
+	#cpufreq.set_frequencies(freq,core)
+	filename = "/sys/devices/system/cpu/cpu"+str(core)+"/cpufreq/scaling_setspeed"
+	f = open(filename, "w")
+	f.write(str(freq))
+	f.close()
+
 	return
 
 def init_action(app_name,net_name):

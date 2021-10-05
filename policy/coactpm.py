@@ -8,28 +8,21 @@ class CoactPM:
     def __init__(self, env):
         self.env = env
         #memcached
-        self.threshold = 0.17
+        self.threshold = 0.45
         #nginx
-        #self.threshold = 0.4
+        #self.threshold = 0.3
         self.down_step = 4
         self.margin = 0.10
-        self.freq_step = 4
-        self.freq_margin = 0.10
+        self.freq_margin = 0.00
 
         self.l_app_usage = list()
         self.l_pred_app_usage = [0] * self.env.max_core
         self.total_usage = 0
         self.period = env.period
-        self.core_alloc_step = 20
+        self.core_alloc_step = 4
         self.is_alloc = False
 
         self.dec_counter = 0
-
-        #pid
-        self.error_prev = 0
-        self.Kp = 40000000
-        self.Kd = 0
-        self.Ki = 10
 
 
     def run(self):
@@ -40,9 +33,10 @@ class CoactPM:
 
         self.env.update_time()
         while True:
+            self.is_alloc = False
             if itr % self.core_alloc_step == 0 :
                 #### core alloc 
-                self.l_app_usage = self.env.get_app_usage_per_core_with_maxfreq(step=8)
+                self.l_app_usage = self.env.get_app_usage_per_core_with_maxfreq(step=self.core_alloc_step - 2)
                 self.total_usage = sum(self.l_app_usage)
 
                 core_T, core_P = self.manage_core_T()
@@ -50,8 +44,6 @@ class CoactPM:
 
                 if core_T != self.env.core_T or core_P != self.env.core_P:
                     self.is_alloc = True
-                else:
-                    self.is_alloc = False
 
                 self.alloc_core(core_T, core_P)
                 print("usage: ",self.l_app_usage[:self.env.max_core]) 
@@ -60,7 +52,6 @@ class CoactPM:
                 self.l_app_usage = self.env.get_app_usage_per_core()
                 self.total_usage = sum(self.l_app_usage)
                 self.manage_freq()
-            #self.pid_control_freq()
 
             #print("itr: ", itr)
             time.sleep(self.period)
@@ -150,7 +141,14 @@ class CoactPM:
 
             else:
                 core_P = core_T
-        
+        '''
+
+        l_app_usage_TP = self.l_app_usage[:self.env.core_P]
+        usage_TP = sum(l_app_usage_TP) / self.env.core_P
+        if (1 + self.margin) * usage_TP < self.threshold and core_P != 1:
+            core_P -= 1
+
+        '''
         return core_T, core_P
 
     def manage_freq(self):
@@ -168,7 +166,7 @@ class CoactPM:
                 else:
                     slack_ratio = (core_usage / self.threshold) 
                 cur_freq = self.env.l_core_freq[core]
-                req_freq = cur_freq * slack_ratio * 0.7
+                req_freq = cur_freq * slack_ratio 
 
                 reversed_l_freq = self.env.l_freq[::-1]
                 for freq in reversed_l_freq:
@@ -192,63 +190,3 @@ class CoactPM:
 
             actions.change_freq_to(next_freq, core)
 
-    def pid_control_freq(self):
-        ##########freq control############
-        for core in range(self.env.max_core):
-            next_freq = self.env.l_freq[0]
-            next_freq_index = 0
-
-            core_usage = (1 + self.margin) * self.l_app_usage[core]
-            error = core_usage - self.threshold 
-            de = error - self.error_prev 
-            dt = self.env.cur_time - self.env.prev_time
-            if dt == 0:
-                break
-
-            req_freq = self.Kp*error + self.Kd*de/dt + self.Ki*error*dt + 2300000
-
-            if core == 0:
-                print("req_freq: ", req_freq, "error: ", error, "de: ", de)
-
-
-            reversed_l_freq = self.env.l_freq[::-1]
-            for freq in reversed_l_freq:
-                if freq > req_freq: 
-                    next_freq = freq
-                    self.env.l_core_freq[core] = next_freq
-                    break
-
-            if core_usage < self.threshold:
-                next_freq_index = self.env.l_core_freq_index[core] + self.freq_step
-                if next_freq_index >= len(self.env.l_freq):
-                    next_freq_index = len(self.env.l_freq) - 1
-                next_freq = self.env.l_freq[next_freq_index]
-
-
-            '''
-            # slack base manage
-            if core_usage == 0:
-                slack_ratio = 0
-            else:
-                slack_ratio = (core_usage / self.threshold) 
-            cur_freq = self.env.l_core_freq[core]
-            req_freq = cur_freq * slack_ratio
-
-            reversed_l_freq = self.env.l_freq[::-1]
-            for freq in reversed_l_freq:
-                if freq > req_freq: 
-                    next_freq = freq
-                    self.env.l_core_freq[core] = next_freq
-                    break
-            '''
-            print("core: ", core, "next_freq: ", next_freq)
-
-            #print("core: ", core, "next_freq: ", next_freq)
-            self.env.l_core_freq[core] = next_freq
-            self.env.l_core_freq_index[core] = next_freq_index
-
-            #print("core: ", core, "cur_freq: ", cur_freq, "next_freq: ", next_freq, "slack_ratio", slack_ratio)
-            actions.change_freq_to(next_freq, core)
-
-
-    
