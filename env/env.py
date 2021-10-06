@@ -59,82 +59,7 @@ class Environment():
 		self.ll_accu_app_usage = list()
 		self.l_accu_pkt_usage = list()
 
-		self.__init_ebpf()
 		actions.init_action(self.app_name, self.net_name)
-
-	def get_state(self):
-		#TODO
-		app_usage = self.__get_app_usage()
-		pkt_usage = self.__get_pkt_usage()
-
-		state = {
-			'core_T': self.core_T/self.max_core, 
-			'core_P': self.core_P/self.max_core, 
-			'app_usage': app_usage/self.core_T, 
-			'pkt_usage': pkt_usage/self.core_P
-		}
-		return state
-	
-	def action(self,action):
-		core_T_action = self.core_T
-		core_P_action = self.core_P
-
-		if action < 8:
-			core_T_action = action + 1
-
-		if action >= 8 and action < 16:
-			core_P_action = action -8 + 1
-
-
-		#if episode == NUM_EPISODES-1:
-		print("Update - Actions to take:",
-				core_T_action, core_P_action)
-
-		#alloc cores for T
-		actions.alloc_T(int(core_T_action),self.app_name)
-		#Alloc cores for P
-		actions.alloc_P(int(core_P_action),self.net_name)
-
-		self.core_T = int(core_T_action)
-		self.core_P = int(core_P_action)
-
-		#sleep during the period
-		time.sleep(self.period)
-		self.update_time()
-
-	def reset(self):
-		state = self.get_state()
-		return state
-	
-	def get_reward(self):
-		reward = 0.0
-		lat_reward = 0.0
-		power_reward = 0.0 
-
-		latency = self.get_latency()
-
-		if latency > self.slo: 
-			lat_reward = max(-latency / self.slo, -5)
-		else:
-			lat_reward = (self.slo - latency) / self.slo
-		
-		power_reward = ( 1 - self.get_power())
-		reward = 0.5 * lat_reward + 0.5 * power_reward
-		
-		return reward
-
-
-	def step(self,action):
-		action_list = action.tolist()[0]
-		max_action = max(action_list)
-		max_index = action_list.index(max_action)
-		self.action(max_index)
-		state = self.get_state()
-		reward = self.get_reward()
-		done = False
-
-		return state, reward, done
-
 
 	def __latency_collect_daemon(self,latency_queue):
 		server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)        
@@ -275,22 +200,6 @@ class Environment():
 		return l_app_usage
 
 
-	def get_app_usage_per_core_with_maxfreq(self,step=1):
-		l_app_usage = list()
-		l_accu_app_usage = list()
-
-		if len(self.ll_accu_app_usage) < 2:
-			return [0] * self.max_core
-
-		diff_time = self.l_time[-1] - self.l_time[-(1+step)]
-		for cpu in range(self.max_core):
-			diff_app_usage = self.ll_accu_app_usage[-1][cpu] - self.ll_accu_app_usage[-(1+step)][cpu] #ns
-			freq_times = self.l_core_freq[cpu] / self.l_freq[0] 
-			cur_app_usage = round(freq_times * diff_app_usage / diff_time / 1000 / 1000 / 1000, 4) 
-			l_app_usage.append(cur_app_usage)
-
-		return l_app_usage
-
 	def get_app_usage_per_core_with_basefreq(self,step=1,base_freq=3600000):
 		l_app_usage = list()
 		l_accu_app_usage = list()
@@ -306,31 +215,7 @@ class Environment():
 			l_app_usage.append(cur_app_usage)
 
 		return l_app_usage
-
-
-	def __get_pkt_usage(self):
-		pkt_usage = 0
-		dist = self.dist
-		for k, v in sorted(dist.items(), key=lambda dist: dist[1].value):
-			pkt_usage = v.value / self.factor
-
-		self.l_accu_pkt_usage.append(pkt_usage)
-
-		if len(self.l_accu_pkt_usage) > self.window_size:
-			self.l_accu_pkt_usage.pop(0)	
-		
-		if len(self.l_accu_pkt_usage) < 2:
-			return 0
-
-		diff_pkt_usage = self.l_accu_pkt_usage[-1] - self.l_accu_pkt_usage[-2] #ns
-		diff_time = self.l_time[-1] - self.l_time[-2]
-		cur_pkt_usage = diff_pkt_usage / diff_time / 1000 / 1000 / 1000 
-		return cur_pkt_usage
-
-	def __get_cpustat(self):
-
-		return cpustat
-
+	
 
 	def __read_msr(self, msr, cpu = 0):
 		f = os.open('/dev/cpu/%d/msr' % (cpu,), os.O_RDONLY)
@@ -346,91 +231,4 @@ class Environment():
 		self.l_time.append(time.time()) #secs
 		return
 
-	def __init_ebpf(self):
-		############# for ebpf ################
-
-		self.factor = 1
-		label = "nsecs"
-
-		# define BPF program
-		bpf_text = """
-		#include <uapi/linux/ptrace.h>
-
-		typedef struct entry_key {
-			u32 pid;
-			u32 cpu;
-		} entry_key_t;
-
-		typedef struct irq_key {
-			u32 vec;
-			u64 slot;
-		} irq_key_t;
-
-		typedef struct account_val {
-			u64 ts;
-			u32 vec;
-		} account_val_t;
-
-		BPF_HASH(start, entry_key_t, account_val_t);
-		BPF_HASH(iptr, u32);
-		BPF_HISTOGRAM(dist, irq_key_t);
-
-		TRACEPOINT_PROBE(irq, softirq_entry)
-		{
-			account_val_t val = {};
-			entry_key_t key = {};
-
-			key.pid = bpf_get_current_pid_tgid();
-			key.cpu = bpf_get_smp_processor_id();
-			val.ts = bpf_ktime_get_ns();
-			val.vec = args->vec;
-
-			if (val.vec != 3)
-				return 0;
-
-			start.update(&key, &val);
-
-			return 0;
-		}
-
-		TRACEPOINT_PROBE(irq, softirq_exit)
-		{
-			u64 delta;
-			u32 vec;
-			account_val_t *valp;
-			irq_key_t key = {0};
-			entry_key_t entry_key = {};
-
-			entry_key.pid = bpf_get_current_pid_tgid();
-			entry_key.cpu = bpf_get_smp_processor_id();
-
-			// fetch timestamp and calculate delta
-			valp = start.lookup(&entry_key);
-			if (valp == 0) {
-				return 0;   // missed start
-			}
-			delta = bpf_ktime_get_ns() - valp->ts;
-			vec = valp->vec;
-
-			if (vec != 3)
-				return 0;
-
-			// store as sum or histogram
-			STORE
-
-			start.delete(&entry_key);
-			return 0;
-		}
-		"""
-
-		# code substitutions
-		bpf_text = bpf_text.replace('STORE',
-			'key.vec = valp->vec; ' +
-			'dist.atomic_increment(key, delta);' 
-			)
-
-		# load BPF program
-		b = BPF(text=bpf_text)
-
-		# output
-		self.dist = b.get_table("dist")
+	

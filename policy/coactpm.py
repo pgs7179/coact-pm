@@ -23,7 +23,6 @@ class CoactPM:
         self.core_alloc_step = 5
         self.is_alloc = False
         self.base_freq=2400000
-
         self.dec_counter = 0
 
 
@@ -37,13 +36,13 @@ class CoactPM:
         while True:
             self.env.update_app_usage_per_core()
 
+            print("#############itr: ", itr,"##################")
             #### core alloc 
             if itr % self.core_alloc_step == 0:
                 self.l_long_app_usage = self.env.get_app_usage_per_core_with_basefreq(step=self.core_alloc_step - 1,base_freq=self.base_freq)
                 #self.l_var_usage = self.env.get_var_app_usage_per_core(l_app_usage=self.l_app_usage)
                 print("long_usage: ", self.l_long_app_usage[:self.env.max_core]) 
                 #print("var_usage: ", self.l_var_usage[:self.env.max_core]) 
-
 
                 core_T, core_P = self.manage_core_T()
                 core_T, core_P = self.manage_core_P(core_T, core_P)
@@ -55,9 +54,7 @@ class CoactPM:
                 self.manage_freq()
                 print("short_usage: ", self.l_short_app_usage[:self.env.max_core]) 
                 print("freq: ",self.env.l_core_freq)
-            #print("pred_usage: ",l_pred_app_usage) 
 
-            #print("itr: ", itr)
             time.sleep(self.period)
 
             #update time
