@@ -15,12 +15,14 @@ class CoactPM:
         self.margin = 0.10
         self.freq_margin = 0.00
 
-        self.l_app_usage = list()
+        self.l_long_app_usage = list()
+        self.l_short_app_usage = list()
+        self.l_var_usage = list()
         self.l_pred_app_usage = [0] * self.env.max_core
-        self.total_usage = 0
         self.period = env.period
-        self.core_alloc_step = 4
+        self.core_alloc_step = 5
         self.is_alloc = False
+        self.base_freq=2400000
 
         self.dec_counter = 0
 
@@ -33,25 +35,27 @@ class CoactPM:
 
         self.env.update_time()
         while True:
-            self.is_alloc = False
-            if itr % self.core_alloc_step == 0 :
-                #### core alloc 
-                self.l_app_usage = self.env.get_app_usage_per_core_with_maxfreq(step=self.core_alloc_step - 2)
-                self.total_usage = sum(self.l_app_usage)
+            self.env.update_app_usage_per_core()
+
+            #### core alloc 
+            if itr % self.core_alloc_step == 0:
+                self.l_long_app_usage = self.env.get_app_usage_per_core_with_basefreq(step=self.core_alloc_step - 1,base_freq=self.base_freq)
+                #self.l_var_usage = self.env.get_var_app_usage_per_core(l_app_usage=self.l_app_usage)
+                print("long_usage: ", self.l_long_app_usage[:self.env.max_core]) 
+                #print("var_usage: ", self.l_var_usage[:self.env.max_core]) 
+
 
                 core_T, core_P = self.manage_core_T()
                 core_T, core_P = self.manage_core_P(core_T, core_P)
 
-                if core_T != self.env.core_T or core_P != self.env.core_P:
-                    self.is_alloc = True
-
                 self.alloc_core(core_T, core_P)
-                print("usage: ",self.l_app_usage[:self.env.max_core]) 
                 print("core T: ", self.env.core_T, " core P: ", self.env.core_P)
             else:
-                self.l_app_usage = self.env.get_app_usage_per_core()
-                self.total_usage = sum(self.l_app_usage)
+                self.l_short_app_usage = self.env.get_app_usage_per_core()
                 self.manage_freq()
+                print("short_usage: ", self.l_short_app_usage[:self.env.max_core]) 
+                print("freq: ",self.env.l_core_freq)
+            #print("pred_usage: ",l_pred_app_usage) 
 
             #print("itr: ", itr)
             time.sleep(self.period)
@@ -80,7 +84,7 @@ class CoactPM:
         ########core_T control##########
         '''
         app_overusage = 0
-        for app_usage in self.l_app_usage:
+        for app_usage in self.l_long_app_usage:
             #threshold violation
             if app_usage > self.threshold:
                 app_overusage += app_usage - self.threshold
@@ -90,7 +94,7 @@ class CoactPM:
         '''
 
         total_app_usage = 0
-        for app_usage in self.l_app_usage:
+        for app_usage in self.l_long_app_usage:
             #threshold violation
             total_app_usage += app_usage
                 
@@ -115,8 +119,8 @@ class CoactPM:
     def manage_core_P(self, core_T, core_P):
                         
         ###########core_P control##########
-        l_app_usage_TP = self.l_app_usage[:self.env.core_P]
-        l_app_usage_T = self.l_app_usage[self.env.core_P:self.env.core_T]
+        l_app_usage_TP = self.l_long_app_usage[:self.env.core_P]
+        l_app_usage_T = self.l_long_app_usage[self.env.core_P:self.env.core_T]
         total_usage_TP = sum(l_app_usage_TP) 
         total_usage_T = sum(l_app_usage_T) 
 
@@ -143,12 +147,13 @@ class CoactPM:
                 core_P = core_T
         '''
 
-        l_app_usage_TP = self.l_app_usage[:self.env.core_P]
+        l_app_usage_TP = self.l_long_app_usage[:self.env.core_P]
         usage_TP = sum(l_app_usage_TP) / self.env.core_P
         if (1 + self.margin) * usage_TP < self.threshold and core_P != 1:
             core_P -= 1
 
         '''
+               
         return core_T, core_P
 
     def manage_freq(self):
@@ -158,7 +163,7 @@ class CoactPM:
             next_freq_index = 0
 
             if self.is_alloc == False:
-                core_usage = (1 + self.freq_margin) * self.l_app_usage[core]
+                core_usage = (1 + self.freq_margin) * self.l_short_app_usage[core]
 
                 # slack base manage
                 if core_usage == 0:
@@ -189,4 +194,6 @@ class CoactPM:
             self.env.l_core_freq_index[core] = next_freq_index
 
             actions.change_freq_to(next_freq, core)
+    
 
+        

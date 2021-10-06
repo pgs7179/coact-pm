@@ -15,7 +15,7 @@ class Environment():
 
 		#config
 		self.window_size = 21
-		self.period = 0.05  # s
+		self.period = 0.1  # s
 		self.server_ip = "10.150.21.207"
 		self.server_port = 9999
 		self.app_name = "memcached"
@@ -200,6 +200,7 @@ class Environment():
 		print("power: ", norm_power)
 		return norm_power
 
+	"""
 	def __get_app_usage(self):
 		app_usage = 0
 		accu_app_usage = 0
@@ -223,8 +224,9 @@ class Environment():
 		cur_app_usage = diff_app_usage / diff_time / 1000 / 1000 / 1000 
 
 		return cur_app_usage
+	"""
 
-	def get_app_usage_per_core(self,step=1):
+	def update_app_usage_per_core(self,step=1):
 		l_app_usage = list()
 		l_accu_app_usage = list()
 
@@ -241,17 +243,37 @@ class Environment():
 
 		if len(self.ll_accu_app_usage) > self.window_size:
 			self.ll_accu_app_usage.pop(0)	
+	
+	def get_var_app_usage_per_core(self, l_app_usage):
+		l_var_app_usage = list()
+		avg_usage = float(sum(l_app_usage)) / self.core_T
+		for core in range(self.max_core):
+			if avg_usage == 0:
+				var_app_usage = 0
+			else:
+				var_app_usage = float(l_app_usage[core]) / avg_usage
+
+			l_var_app_usage.append(var_app_usage)
+		
+		return l_var_app_usage
+
+	def get_app_usage_per_core(self, step=1):
+		l_app_usage = list()
+		l_accu_app_usage = list()
 
 		if len(self.ll_accu_app_usage) < 2:
 			return [0] * self.max_core
 
 		diff_time = self.l_time[-1] - self.l_time[-(1+step)]
 		for cpu in range(self.max_core):
-			diff_app_usage = self.ll_accu_app_usage[-1][cpu] - self.ll_accu_app_usage[-(1+step)][cpu] #ns
-			cur_app_usage = round(diff_app_usage / diff_time / 1000 / 1000 / 1000, 4) 
+			diff_app_usage = self.ll_accu_app_usage[-1][cpu] - \
+				self.ll_accu_app_usage[-(1+step)][cpu]  # ns
+			cur_app_usage = round(diff_app_usage /
+			                      diff_time / 1000 / 1000 / 1000, 4)
 			l_app_usage.append(cur_app_usage)
 
 		return l_app_usage
+
 
 	def get_app_usage_per_core_with_maxfreq(self,step=1):
 		l_app_usage = list()
@@ -269,6 +291,21 @@ class Environment():
 
 		return l_app_usage
 
+	def get_app_usage_per_core_with_basefreq(self,step=1,base_freq=3600000):
+		l_app_usage = list()
+		l_accu_app_usage = list()
+
+		if len(self.ll_accu_app_usage) < 2:
+			return [0] * self.max_core
+
+		diff_time = self.l_time[-1] - self.l_time[-(1+step)]
+		for cpu in range(self.max_core):
+			diff_app_usage = self.ll_accu_app_usage[-1][cpu] - self.ll_accu_app_usage[-(1+step)][cpu] #ns
+			freq_times = self.l_core_freq[cpu] / base_freq
+			cur_app_usage = round(freq_times * diff_app_usage / diff_time / 1000 / 1000 / 1000, 4) 
+			l_app_usage.append(cur_app_usage)
+
+		return l_app_usage
 
 
 	def __get_pkt_usage(self):
