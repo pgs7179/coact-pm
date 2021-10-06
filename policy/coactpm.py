@@ -3,10 +3,10 @@ import time
 import math
 from cpufreq import cpuFreq
 
-
 class CoactPM:
-    def __init__(self, env):
+    def __init__(self, env, actions):
         self.env = env
+        self.actions = actions
         #memcached
         #self.threshold = 0.45
         #nginx
@@ -25,6 +25,8 @@ class CoactPM:
         self.base_freq=2400000
         self.dec_counter = 0
 
+        self.debug = False
+
 
     def run(self):
         #get usage
@@ -36,13 +38,15 @@ class CoactPM:
         while True:
             self.env.update_app_usage_per_core()
 
-            print("#############itr: ", itr,"##################")
+            if self.debug:
+                print("#############itr: ", itr,"##################")
             #### core alloc 
             if itr % self.core_alloc_step == 0:
                 self.l_long_app_usage = self.env.get_app_usage_per_core_with_basefreq(step=self.core_alloc_step - 1,base_freq=self.base_freq)
                 #self.l_var_usage = self.env.get_var_app_usage_per_core(l_app_usage=self.l_app_usage)
-                print("long_usage: ", self.l_long_app_usage[:self.env.max_core]) 
-                print("var_usage: ", self.l_var_usage[:self.env.max_core]) 
+                if self.debug:
+                    print("long_usage: ", self.l_long_app_usage[:self.env.max_core]) 
+                    print("var_usage: ", self.l_var_usage[:self.env.max_core]) 
 
                 core_T, core_P = self.manage_core_T()
                 core_T, core_P = self.manage_core_P(core_T, core_P)
@@ -52,8 +56,9 @@ class CoactPM:
             else:
                 self.l_short_app_usage = self.env.get_app_usage_per_core()
                 self.manage_freq()
-                print("short_usage: ", self.l_short_app_usage[:self.env.max_core]) 
-                print("freq: ",self.env.l_core_freq)
+                if self.debug:
+                    print("short_usage: ", self.l_short_app_usage[:self.env.max_core]) 
+                    print("freq: ",self.env.l_core_freq)
 
             time.sleep(self.period)
 
@@ -71,25 +76,14 @@ class CoactPM:
 
         if self.env.core_T != core_T:
             self.env.core_T = core_T
-            actions.alloc_T(core_T, self.env.app_name)
+            self.actions.alloc_T(target_core=core_T)
 
         if self.env.core_P != core_P:
             self.env.core_P = core_P
-            actions.alloc_P(core_P, self.env.net_name)
+            self.actions.alloc_P(target_core=core_P)
 
     def manage_core_T(self):
         ########core_T control##########
-        '''
-        app_overusage = 0
-        for app_usage in self.l_long_app_usage:
-            #threshold violation
-            if app_usage > self.threshold:
-                app_overusage += app_usage - self.threshold
-                
-        target_core = self.env.core_T + math.ceil(app_overusage / self.threshold) 
-        core_T, core_P = target_core, target_core 
-        '''
-
         total_app_usage = 0
         for app_usage in self.l_long_app_usage:
             #threshold violation
@@ -117,6 +111,7 @@ class CoactPM:
                         
         ###########core_P control##########
         l_app_usage_TP = self.l_long_app_usage[:self.env.core_P]
+        """
         l_app_usage_T = self.l_long_app_usage[self.env.core_P:self.env.core_T]
         total_usage_TP = sum(l_app_usage_TP) 
         total_usage_T = sum(l_app_usage_T) 
@@ -142,14 +137,13 @@ class CoactPM:
 
             else:
                 core_P = core_T
-        '''
+        """
 
         l_app_usage_TP = self.l_long_app_usage[:self.env.core_P]
         usage_TP = sum(l_app_usage_TP) / self.env.core_P
         if (1 + self.margin) * usage_TP < self.threshold and core_P != 1:
             core_P -= 1
 
-        '''
                
         return core_T, core_P
 
@@ -190,7 +184,7 @@ class CoactPM:
             self.env.l_core_freq[core] = next_freq
             self.env.l_core_freq_index[core] = next_freq_index
 
-            actions.change_freq_to(next_freq, core)
+            self.actions.change_freq_to(freq=next_freq,core=core)
     
 
         

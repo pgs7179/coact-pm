@@ -7,11 +7,13 @@ sys.path.append("/home/caslab/coact-pm")
 
 from env.env import Environment
 from policy.coactpm import CoactPM
+from actions import Action
 
 if __name__=="__main__":
 	# environment for getting states and peforming actions
 	env = Environment()
-	agent = CoactPM(env)
+	actions = Action(env)
+	agent = CoactPM(env,actions)
 	agent.run()
 
 

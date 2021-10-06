@@ -1,4 +1,3 @@
-import actions
 import time
 from multiprocessing import Process, Queue
 import socket
@@ -15,7 +14,7 @@ class Environment():
 
 		#config
 		self.window_size = 21
-		self.period = 0.01  # s
+		self.period = 0.05  # s
 		self.server_ip = "10.150.21.207"
 		self.server_port = 9999
 		#self.app_name = "memcached"
@@ -59,7 +58,6 @@ class Environment():
 		self.ll_accu_app_usage = list()
 		self.l_accu_pkt_usage = list()
 
-		actions.init_action(self.app_name, self.net_name)
 
 	def __latency_collect_daemon(self,latency_queue):
 		server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)        
