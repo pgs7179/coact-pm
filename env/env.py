@@ -2,7 +2,7 @@ import actions
 import time
 from multiprocessing import Process, Queue
 import socket
-from bcc import BPF
+#from bcc import BPF
 from time import sleep, strftime
 import sys,os
 import struct
@@ -15,11 +15,11 @@ class Environment():
 
 		#config
 		self.window_size = 21
-		self.period = 0.1  # s
+		self.period = 0.01  # s
 		self.server_ip = "10.150.21.207"
 		self.server_port = 9999
-		self.app_name = "memcached"
-		#self.app_name = "nginx"
+		#self.app_name = "memcached"
+		self.app_name = "nginx"
 		self.net_name = "enp59s0f0"
 
 		#time

@@ -1,12 +1,9 @@
-import torch
-import os
-import numpy as np
-import matplotlib.pyplot as plt
+#import numpy as np
+#import matplotlib.pyplot as plt
 import sys
-import time
-from time import sleep, strftime
+#from time import sleep, strftime
 
-sys.path.append(".")
+sys.path.append("/home/caslab/coact-pm")
 
 from env.env import Environment
 from policy.coactpm import CoactPM

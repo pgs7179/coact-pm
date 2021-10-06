@@ -8,9 +8,9 @@ class CoactPM:
     def __init__(self, env):
         self.env = env
         #memcached
-        self.threshold = 0.45
+        #self.threshold = 0.45
         #nginx
-        #self.threshold = 0.3
+        self.threshold = 0.25
         self.down_step = 4
         self.margin = 0.10
         self.freq_margin = 0.00
@@ -20,7 +20,7 @@ class CoactPM:
         self.l_var_usage = list()
         self.l_pred_app_usage = [0] * self.env.max_core
         self.period = env.period
-        self.core_alloc_step = 5
+        self.core_alloc_step = 4
         self.is_alloc = False
         self.base_freq=2400000
         self.dec_counter = 0
@@ -42,13 +42,13 @@ class CoactPM:
                 self.l_long_app_usage = self.env.get_app_usage_per_core_with_basefreq(step=self.core_alloc_step - 1,base_freq=self.base_freq)
                 #self.l_var_usage = self.env.get_var_app_usage_per_core(l_app_usage=self.l_app_usage)
                 print("long_usage: ", self.l_long_app_usage[:self.env.max_core]) 
-                #print("var_usage: ", self.l_var_usage[:self.env.max_core]) 
+                print("var_usage: ", self.l_var_usage[:self.env.max_core]) 
 
                 core_T, core_P = self.manage_core_T()
                 core_T, core_P = self.manage_core_P(core_T, core_P)
 
                 self.alloc_core(core_T, core_P)
-                print("core T: ", self.env.core_T, " core P: ", self.env.core_P)
+                #print("core T: ", self.env.core_T, " core P: ", self.env.core_P)
             else:
                 self.l_short_app_usage = self.env.get_app_usage_per_core()
                 self.manage_freq()
