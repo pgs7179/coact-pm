@@ -29,7 +29,7 @@ class Environment():
 		self.min_power = 6 * 100 * 1000
 
 		#latency
-		self.slo = 1.5
+		self.slo = 15
 
 		#cores
 		self.max_core = 8
@@ -94,7 +94,7 @@ class Environment():
 		if count > 0: 
 			avg_latency = accu_latency / count
 
-		print("p99: ", avg_latency)
+		print("p95: ", avg_latency)
 		return avg_latency
 	
 	def get_power(self):

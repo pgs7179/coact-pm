@@ -1,21 +1,23 @@
 import subprocess
 from cpufreq import cpuFreq
+import sys,os
 
 
 class Action:
 	def __init__(self, env):
-		self.fd_alloc_T = None
+		self.l_fd_alloc_T = list()
 		self.l_fd_alloc_P = list()
 		self.l_fd_alloc_freq = list()
 		self.env = env
 		self.init_action()
 
 	def alloc_T(self, target_core):
-		f = self.fd_alloc_T
+		fd = self.l_fd_alloc_T[0]
 		if target_core == 1:
-			f.write("0")
+			os.write(fd,'0'.encode())
 		else:
-			f.write("0-"+str(target_core-1))
+			str_cpu='0-'+str(target_core-1)
+			os.write(fd,str_cpu.encode())
 
 		return
 
@@ -24,17 +26,17 @@ class Action:
 		ethtool_str = "ethtool -X " + str(self.env.net_name) + " equal " + str(target_core)
 		subprocess.call(ethtool_str,shell=True)
 		for core in range(self.env.max_core):
-			f = self.l_fd_alloc_P[core]
+			fd = self.l_fd_alloc_P[core]
 			if core < target_core:
-				f.write("ff")
+				os.write(fd,'ff'.encode())
 			else:
-	 			f.write("00")
+	 			os.write(fd,'00'.encode())
 
 		return
 
 	def change_freq_to(self, freq, core):
-		f = self.l_fd_alloc_freq[core]
-		f.write(str(freq))
+		fd = self.l_fd_alloc_freq[core]
+		os.write(fd,str(freq).encode())
 
 		return
 
@@ -92,10 +94,18 @@ class Action:
 			cpufreq.set_frequencies(freq, core)
 
 		#file desciptor set
-		self.fd_alloc_T = open("/sys/fs/cgroup/cpuset/"+str(self.env.app_name)+"/cpuset.cpus", "w")
-		for core in range(self.env.max_core):
-			fd_alloc_P = open("/sys/class/net/" + str(self.env.net_name) + "/queues/tx-" + str(core) + "/xps_cpus", "w")
-			fd_alloc_freq = open("/sys/devices/system/cpu/cpu"+str(core)+"/cpufreq/scaling_setspeed", "w")
+		fd_alloc_T = os.open("/sys/fs/cgroup/cpuset/"+str(self.env.app_name)+"/cpuset.cpus", os.O_WRONLY)
+		self.l_fd_alloc_T.append(fd_alloc_T)
 
+		for core in range(self.env.max_core):
+			fd_alloc_P = os.open("/sys/class/net/" + str(self.env.net_name) + "/queues/tx-" + str(core) + "/xps_cpus", os.O_WRONLY)
+			fd_alloc_freq = os.open("/sys/devices/system/cpu/cpu"+str(core)+"/cpufreq/scaling_setspeed", os.O_WRONLY)
 			self.l_fd_alloc_P.append(fd_alloc_P)
 			self.l_fd_alloc_freq.append(fd_alloc_freq)
+
+	def close_fd(self):
+		os.close(self.l_fd_alloc_T[0])
+
+		for core in range(self.env.max_core):
+			os.close(self.l_fd_alloc_P[core])
+			os.close(self.l_fd_alloc_freq[core])

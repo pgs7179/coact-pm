@@ -14,6 +14,10 @@ if __name__=="__main__":
 	env = Environment()
 	actions = Action(env)
 	agent = CoactPM(env,actions)
-	agent.run()
+	try: 
+		agent.run()
+	except KeyboardInterrupt:
+		actions.close_fd()
+		sys.exit(0)
 
 
