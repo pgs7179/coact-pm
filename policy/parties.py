@@ -34,9 +34,10 @@ class Parties:
         self.debug = True
 
 
+
     def run(self):
-        #get usage
         itr = 1
+        #get usage
         cpufreq = cpuFreq()
         self.freq_max_idx = len(self.env.l_freq) - 1
         self.core = self.env.max_core
@@ -45,18 +46,22 @@ class Parties:
 
         self.env.update_time()
         while True:
-
             if self.debug:
                 print("#############itr: ", itr,"##################")
-
             self.online_profile()
 
             slack = (self.env.slo - self.curr_latency) / self.env.slo
             if slack < 0.05:
+                if self.debug:
+                    print("UPSIZE!")
                 self.upsize()
             elif slack > 0.2:
+                if self.debug:
+                    print("DOWNSIZE!")
                 self.downsize()
-
+            else:
+                if self.debug:
+                    print("Do Nothing!")
             itr += 1
 
 
@@ -96,30 +101,53 @@ class Parties:
     
     def take_action(self, action, direction):
         if action == CORE:
+            if self.debug:
+                print("action: CORE")
             if direction == UP:
+                if self.debug:
+                    print("direction: UP")
                 self.core = self.core + 1
                 if self.core > self.env.max_core:
                     self.core = self.env.max_core
+                    self.action[0] = not self.action[0]
             else:
+                if self.debug:
+                    print("direction: DOWN")
                 self.core = self.core - 1
-                if self.core < 0:
-                    self.core = 0
+                if self.core < 1:
+                    self.core = 1
+                    self.action[0] = not self.action[0]
 
         if action == FREQ:
+            if self.debug:
+                print("action: FREQ")
             if direction == UP:
+                if self.debug:
+                    print("direction: UP")
                 self.freq = self.freq - 1
                 if self.freq < 0:
                     self.freq = 0
+                    self.action[0] = not self.action[0]
             else:
+                if self.debug:
+                    print("direction: DOWN")
                 self.freq = self.freq + 1
-                if self.core > self.freq_max_idx:
-                    self.core = self.freq_max_idx
+                if self.freq > self.freq_max_idx:
+                    self.freq = self.freq_max_idx
+                    self.action[0] = not self.action[0]
+
         self.actions.alloc_T(target_core=self.core)
+
+
         
         for core in range(self.env.max_core):
             if core < self.core:
+                if self.debug:
+                    print("target core", core, self.env.l_freq[self.freq])
                 self.actions.change_freq_to(freq=self.env.l_freq[self.freq], core=core)
             else:
+                if self.debug:
+                    print("else core", core, self.env.l_freq[self.freq_max_idx])
                 self.actions.change_freq_to(freq=self.env.l_freq[self.freq_max_idx], core=core)
 
 
