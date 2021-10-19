@@ -29,7 +29,7 @@ class Environment():
 		self.min_power = 6 * 100 * 1000
 
 		#latency
-		self.slo = 15
+		self.slo = 10
 
 		#cores
 		self.max_core = 8

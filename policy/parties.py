@@ -24,7 +24,7 @@ class Parties:
         self.freq = 0 # index of env.l_freq
         self.freq_max_idx = 0 # max index of env.l_freq
         
-        self.period = 0.5 # 500 ms
+        self.period = 0.1 # 100 ms
 
         ###online profile###
         self.prev_latency = 10000000000

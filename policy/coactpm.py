@@ -14,7 +14,7 @@ class CoactPM:
         #nginx
         self.threshold = 0.15
         self.down_step = 0
-        self.margin = 0.10
+        self.margin = 0.00
         self.freq_margin = 0.00
 
         self.l_long_app_usage = list()
@@ -221,8 +221,8 @@ class CoactPM:
             return
 
 
-        print("max_usage: ", max_usage)
-        print("load index: ", load_index)
+        #print("max_usage: ", max_usage)
+        #print("load index: ", load_index)
         l_accu_latency = self.ll_accu_latency[load_index] 
         l_accu_latency.append(cur_latency)
         if len(l_accu_latency) > self.env.window_size:
@@ -241,7 +241,7 @@ class CoactPM:
         self.threshold = float(target_index + 1) / self.profile_size 
         if self.debug:
             print("cur threshold: ", self.threshold)
-            print(self.l_profile)
+            #print(self.l_profile)
  
 
     
