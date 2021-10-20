@@ -17,10 +17,16 @@ class Environment():
 		self.period = 0.05  # s
 		self.server_ip = "10.150.21.207"
 		self.server_port = 9999
-		#self.app_name = "memcached"
-		self.app_name = "nginx"
 		self.net_name = "enp59s0f0"
+		self.parsec_path = "/home/caslab/coact-pm/parsec-3.0/bin/parsecmgmt"
 
+
+		self.l_lc_name = ['memcached','nginx','xapian','mysql']
+		self.lc_name = self.l_lc_name[0]
+		self.l_be_name = ['blackscholes','facesim','ferret','raytrace','swaptions','fluidanimate'] 
+		self.be_name = self.l_be_name[2]
+
+		
 		#time
 		self.l_time = [0]
 
@@ -35,6 +41,9 @@ class Environment():
 		self.max_core = 8
 		self.core_T = self.max_core
 		self.core_P = self.max_core
+
+		self.be_core = 0
+		self.is_be_running = True
 
 		#freq
 		self.l_freq = [3500000, 3300000, 3200000, 3000000, 2900000, \
@@ -130,7 +139,7 @@ class Environment():
 
 		#get accumulated app usage from cgroup
 		f = open("/sys/fs/cgroup/cpuacct/" +
-					self.app_name+"/cpuacct.usage")
+					self.lc_name+"/cpuacct.usage")
 		for line in f.readlines():
 			accu_app_usage = float(line)
 		f.close()
@@ -155,7 +164,7 @@ class Environment():
 
 		#get accumulated app usage from cgroup
 		f = open("/sys/fs/cgroup/cpuacct/" +
-					self.app_name+"/cpuacct.usage_percpu")
+					self.lc_name+"/cpuacct.usage_percpu")
 		for line in f.readlines():
 			l_temp = line.split(" ")
 			for app_usage in l_temp[:-1]:

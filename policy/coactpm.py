@@ -25,7 +25,8 @@ class CoactPM:
         self.period = env.period
         self.core_alloc_step = 4
         self.is_alloc = False
-        self.base_freq=2400000
+        self.base_freq=self.env.l_freq[-1]
+        #self.base_freq=self.env.l_freq[7]
         self.dec_counter = 0
 
         ###online profile###
@@ -36,6 +37,12 @@ class CoactPM:
         #self.debug = False
         self.debug = True
 
+        self.mode = "lc-only"
+        #self.mode = "co-loc"
+
+        if self.mode == "co-loc":
+            self.actions.init_be()
+            self.base_freq=self.env.l_freq[0]
 
     def run(self):
         #get usage
@@ -55,7 +62,7 @@ class CoactPM:
                 #self.l_var_usage = self.env.get_var_app_usage_per_core(l_app_usage=self.l_app_usage)
                 if self.debug:
                     print("long_usage: ", self.l_long_app_usage[:self.env.max_core]) 
-
+                    print("be core: ", self.env.be_core)
                 core_T, core_P = self.manage_core_T()
                 core_T, core_P = self.manage_core_P(core_T, core_P)
 
@@ -68,6 +75,10 @@ class CoactPM:
                 if core_T != self.env.core_T:
                     for core in range(core_T):
                         self.actions.change_freq_to(freq=self.base_freq, core=core)
+                
+                if self.mode == "co-loc":
+                    self.actions.alloc_be(self.env.max_core - core_T)
+
 
                 if self.debug:
                     print("core T: ", self.env.core_T, " core P: ", self.env.core_P)

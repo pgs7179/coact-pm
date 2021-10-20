@@ -18,6 +18,7 @@ if __name__=="__main__":
 		agent.run()
 	except KeyboardInterrupt:
 		actions.close_fd()
+		actions.kill_be()
 		sys.exit(0)
 
 
