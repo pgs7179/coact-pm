@@ -67,12 +67,13 @@ class Action:
 
 	def init_action(self):
 		app_tids_list = list()
-
+		grep_str=""
 		if self.env.lc_name == "memcached":
 			grep_str="ps -eLF | grep " + self.env.lc_name  + "|awk '{print $4}' | awk '{if (NR!=1) {print}}'"
 		if self.env.lc_name == "nginx":
 			grep_str="ps -eLF | grep -e" + "\"" + self.env.lc_name + ": worker"+ "\"" + " -e " + "polkitd " + "-e dbus"  + "|awk '{print $4}'"
 
+		app_tids_str = None
 		app_tids_str = subprocess.check_output (grep_str, shell=True)
 		app_tids_str = app_tids_str.split()
 

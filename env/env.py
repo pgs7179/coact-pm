@@ -22,7 +22,7 @@ class Environment():
 
 
 		self.l_lc_name = ['memcached','nginx','xapian','mysql']
-		self.lc_name = self.l_lc_name[0]
+		self.lc_name = self.l_lc_name[2]
 		self.l_be_name = ['blackscholes','facesim','ferret','raytrace','swaptions','fluidanimate'] 
 		self.be_name = self.l_be_name[2]
 
@@ -170,6 +170,8 @@ class Environment():
 			for app_usage in l_temp[:-1]:
 				l_accu_app_usage.append(int(app_usage))
 		f.close()
+
+		print("l_accu_app_usage: ",l_accu_app_usage)
 
 		self.ll_accu_app_usage.append(l_accu_app_usage)
 

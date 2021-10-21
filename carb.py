@@ -19,32 +19,35 @@ from operator import itemgetter
 class Global(object):
     def __init__(self):
         #self.app_name = "memcached"
-        self.app_name = "memcached"
-        self.period= 0.1  # s
+        self.app_name = "xapian"
+        self.period= 0.05  # s
         self.max_core = 8
         if self.app_name == "memcached":
+            #nginx & memcached
             self.slo = 10.0
             self.sens_rps = 100000
             self.boost_rps = 300000
+
+            
+
             self.sens_reptime = self.slo * 0.1
             self.step_size = 1
 
         if self.app_name == "nginx":
-            #multi-queue
-            '''
-            self.slo = 5.0
-            self.sens_rps = 5000
-            self.boost_rps = 300000
-            self.sens_reptime = 0.5
-            self.step_size = 1
-            '''
 
-            #single queue
-            self.slo = 5.0
+            self.slo = 10.0
             self.sens_rps = 5000
             self.boost_rps = 300000
             self.sens_reptime = 0.5
             self.step_size = 1
+
+        if self.app_name == "xapian":
+            self.slo = 10.0
+            self.sens_rps = 1000
+            self.boost_rps = 4000
+            self.sens_reptime = self.slo * 0.1
+            self.step_size = 1
+
 
 
         self.interface_name = "enp59s0f0"
@@ -269,6 +272,7 @@ class Carb(object):
 def initCgroup(param):
     app_tids_list = list()
 
+    grep_str=""
     #get tid
     if param.app_name == "memcached":
         grep_str="ps -eLF | grep " + param.app_name  + "|awk '{print $4}' | awk '{if (NR!=1) {print}}'"
