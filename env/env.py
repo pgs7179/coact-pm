@@ -23,8 +23,8 @@ class Environment():
 
 		self.l_lc_name = ['memcached','nginx','xapian','mysql']
 		self.lc_name = self.l_lc_name[2]
-		self.l_be_name = ['blackscholes','facesim','ferret','raytrace','swaptions','fluidanimate'] 
-		self.be_name = self.l_be_name[2]
+		self.l_be_name = ['blackscholes','ferret','fluidanimate','freqmine','vips','dedup'] 
+		self.be_name = self.l_be_name[6]
 
 		
 		#time
