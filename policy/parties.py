@@ -154,8 +154,13 @@ class Parties:
                     print("target core", core, self.env.l_freq[self.freq])
                 self.actions.change_freq_to(freq=self.env.l_freq[self.freq], core=core)
             else:
-                if self.debug:
-                    print("else core", core, self.env.l_freq[self.freq_max_idx])
-                self.actions.change_freq_to(freq=self.env.l_freq[self.freq_max_idx], core=core)
+                if self.mode == "co-loc":
+                    self.actions.change_freq_to(freq=self.env.l_freq[0], core=core)
+                    if self.debug:
+                        print("else core", core, self.env.l_freq[0])
+                else: 
+                    self.actions.change_freq_to(freq=self.env.l_freq[self.freq_max_idx], core=core)
+                    if self.debug:
+                        print("else core", core, self.env.l_freq[self.freq_max_idx])
 
 
