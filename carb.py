@@ -19,7 +19,7 @@ from operator import itemgetter
 class Global(object):
     def __init__(self):
         #self.app_name = "memcached"
-        self.app_name = "xapian"
+        self.app_name = "nginx"
         self.period= 0.05  # s
         self.max_core = 8
         if self.app_name == "memcached":

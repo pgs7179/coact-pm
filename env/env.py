@@ -22,9 +22,9 @@ class Environment():
 
 
 		self.l_lc_name = ['memcached','nginx','xapian','mysql']
-		self.lc_name = self.l_lc_name[2]
+		self.lc_name = self.l_lc_name[1]
 		self.l_be_name = ['blackscholes','ferret','fluidanimate','freqmine','vips','dedup'] 
-		self.be_name = self.l_be_name[6]
+		self.be_name = self.l_be_name[5]
 
 		
 		#time
@@ -35,7 +35,7 @@ class Environment():
 		self.min_power = 6 * 100 * 1000
 
 		#latency
-		self.slo = 10
+		self.slo = 15
 
 		#cores
 		self.max_core = 8
@@ -65,7 +65,7 @@ class Environment():
 		self.l_engy = list()
 		self.l_accu_app_usage = list()
 		self.ll_accu_app_usage = list()
-		self.l_accu_pkt_usage = list()
+		self.l_rx_pkts = list()
 
 
 	def __latency_collect_daemon(self,latency_queue):
@@ -171,7 +171,6 @@ class Environment():
 				l_accu_app_usage.append(int(app_usage))
 		f.close()
 
-		print("l_accu_app_usage: ",l_accu_app_usage)
 
 		self.ll_accu_app_usage.append(l_accu_app_usage)
 
@@ -240,4 +239,27 @@ class Environment():
 		self.l_time.append(time.time()) #secs
 		return
 
+	def update_rx_pkts(self):
+		rx_pkts = 0
+		if len(self.l_rx_pkts) > self.window_size:
+			self.l_rx_pkts.pop(0)
+		f = open("/sys/class/net/"+self.net_name+"/statistics/rx_packets")
+		for line in f.readlines():
+			rx_pkts = int(line)
+		f.close()
+
+		self.l_rx_pkts.append(rx_pkts)
+
+		return 
 	
+	def get_rps(self,step=1):
+		rps = 0
+		if len(self.l_rx_pkts) < 2 or len(self.l_time) < 2:
+			return 1
+
+		diff_time = (self.l_time[-1] - self.l_time[-(1+step)])
+		diff_rx_pkts = self.l_rx_pkts[-1] - self.l_rx_pkts[-(1+step)]
+		rps = float(diff_rx_pkts) / float(diff_time) 
+		print("rps: ", rps)
+
+		return rps

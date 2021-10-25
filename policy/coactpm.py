@@ -2,6 +2,8 @@ import actions
 import time
 import math
 from cpufreq import cpuFreq
+
+from env.regression import Linear_Regression
 #import numpy as np
 
 
@@ -25,9 +27,11 @@ class CoactPM:
         self.period = env.period
         self.core_alloc_step = 4
         self.is_alloc = False
-        self.base_freq=self.env.l_freq[-1]
-        #self.base_freq=self.env.l_freq[7]
+        #self.base_freq=self.env.l_freq[-1]
+        self.base_freq=self.env.l_freq[7]
         self.dec_counter = 0
+        self.freq_coef = 1
+        self.core_coef = 1
 
         ###online profile###
         self.profile_size = 20
@@ -43,6 +47,9 @@ class CoactPM:
         if self.mode == "co-loc":
             self.actions.init_be()
             self.base_freq=self.env.l_freq[0]
+        
+
+        self.lr = Linear_Regression()
 
     def run(self):
         #get usage
@@ -53,12 +60,14 @@ class CoactPM:
         self.env.update_time()
         while True:
             self.env.update_app_usage_per_core()
+            self.env.update_rx_pkts()
 
             if self.debug:
                 print("#############itr: ", itr,"##################")
             #### core alloc 
             if itr % self.core_alloc_step == 0:
-                self.l_long_app_usage = self.env.get_app_usage_per_core_with_basefreq(step=self.core_alloc_step - 1,base_freq=self.base_freq)
+                self.l_long_app_usage = self.env.get_app_usage_per_core(step=self.core_alloc_step - 1)
+                self.l_long_app_usage = self.convert_usage(l_app_usage=self.l_long_app_usage)
                 #self.l_var_usage = self.env.get_var_app_usage_per_core(l_app_usage=self.l_app_usage)
                 if self.debug:
                     print("long_usage: ", self.l_long_app_usage[:self.env.max_core]) 
@@ -118,7 +127,7 @@ class CoactPM:
             #threshold violation
             total_app_usage += app_usage
                 
-        target_core = math.ceil(total_app_usage / self.threshold * (1 + self.margin))
+        target_core = math.ceil((1 + self.margin) * total_app_usage / self.threshold / self.core_coef)
         if target_core == 0:
             target_core = 1
 
@@ -191,7 +200,7 @@ class CoactPM:
                 else:
                     slack_ratio = (core_usage / self.threshold) 
                 cur_freq = self.env.l_core_freq[core]
-                req_freq = cur_freq * slack_ratio 
+                req_freq = cur_freq * slack_ratio * self.freq_coef
 
                 if req_freq > self.env.l_freq[0]:
                     overmax_freq_count += 1
@@ -224,7 +233,11 @@ class CoactPM:
     def online_profile(self):
         cur_latency = self.env.get_latency()
         max_usage = max(self.env.get_app_usage_per_core())
+        max_index = self.env.get_app_usage_per_core().index(max_usage)
         load_index = int((max_usage * 100 + 1)/ self.profile_size) 
+        rps = self.env.get_rps() 
+
+        
         if load_index > self.profile_size:
             load_index = self.profile_size
         
@@ -253,6 +266,24 @@ class CoactPM:
         if self.debug:
             print("cur threshold: ", self.threshold)
             #print(self.l_profile)
+
+        #linear regression
+        if max_usage == 0:
+            return
+
+        x = [self.env.l_core_freq[max_index]/self.env.l_core_freq[0], self.env.core_T, 1/rps, 1]
+        y = [1 / max_usage]
+        self.lr.append_data(x,y)
  
 
-    
+    def convert_usage(self,l_app_usage):
+        l_converted_app_usage = list()
+        for cpu in range(self.env.max_core):
+            usage = self.core_coef * l_app_usage[cpu] * self.env.l_core_freq[cpu] / self.base_freq
+            l_converted_app_usage.append(usage)
+        
+        return l_converted_app_usage
+
+    def regression(self):
+
+        return

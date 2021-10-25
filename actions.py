@@ -139,7 +139,7 @@ class Action:
 	def init_be(self):
 		be_tids_list = list()
 		self.execute_be()
-		time.sleep(1)
+		time.sleep(3)
 		grep_str="ps -eLF | grep " + self.env.be_name  + "|awk '{print $4}' | awk '{if (NR!=1) {print}}'"
 		be_tids_str = subprocess.check_output (grep_str, shell=True)
 		be_tids_str = be_tids_str.split()
@@ -200,7 +200,7 @@ class Action:
 	
 	def execute_be(self):
 		#TODO
-		cmd = self.env.parsec_path +" -a run -p " + self.env.be_name + " -i native -n " + str(self.env.max_core - 1) +" &"
+		cmd = self.env.parsec_path +" -a run -p " + self.env.be_name + " -i native -n " + str(self.env.max_core) +" &"
 		os.system(cmd)
 
 		return
