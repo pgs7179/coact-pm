@@ -33,6 +33,12 @@ class Parties:
         #self.debug = False
         self.debug = True
 
+        #self.mode = "lc_only"
+        self.mode = "co-loc"
+
+        if self.mode == "co-loc":
+            self.actions.init_be()
+
 
 
     def run(self):
@@ -137,6 +143,8 @@ class Parties:
                     self.action[0] = not self.action[0]
 
         self.actions.alloc_T(target_core=self.core)
+        if self.mode == "co-loc":
+            self.actions.alloc_be(self.env.max_core - self.core)
 
 
         
