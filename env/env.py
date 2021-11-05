@@ -22,9 +22,9 @@ class Environment():
 
 
 		self.l_lc_name = ['memcached','nginx','xapian','mysql']
-		self.lc_name = self.l_lc_name[1]
+		self.lc_name = self.l_lc_name[0]
 		self.l_be_name = ['blackscholes','ferret','fluidanimate','freqmine','vips','dedup'] 
-		self.be_name = self.l_be_name[5]
+		self.be_name = self.l_be_name[1]
 
 		
 		#time
@@ -35,7 +35,15 @@ class Environment():
 		self.min_power = 6 * 100 * 1000
 
 		#latency
-		self.slo = 15
+		self.slo = None
+		if self.lc_name == "memcached":
+			self.slo = 10
+		if self.lc_name == "nginx":
+			self.slo = 15
+		if self.lc_name == "xapian":
+			self.slo = 10
+		if self.lc_name == "mysql":
+			self.slo = 10
 
 		#cores
 		self.max_core = 8

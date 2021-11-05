@@ -30,8 +30,6 @@ class CoactPM:
         #self.base_freq=self.env.l_freq[-1]
         self.base_freq=self.env.l_freq[7]
         self.dec_counter = 0
-        self.freq_coef = 1
-        self.core_coef = 1
 
         ###online profile###
         self.profile_size = 20
@@ -43,6 +41,35 @@ class CoactPM:
 
         self.mode = "lc-only"
         #self.mode = "co-loc"
+
+        self.opt = True
+        #self.opt = False
+        if self.env.lc_name == "memcached":
+            #R2 = 0.7178174431617681
+            self.core_coef = 0.05017675
+            self.freq_coef = 0.0913457 / (10 ** 6) 
+            self.intercept = 0.01835323
+
+        if self.env.lc_name == "nginx":
+            #R2 = 0.7605843515938565
+            self.core_coef = 0.05424087
+            self.freq_coef = 0.11612534 / (10 ** 6) 
+            self.intercept = -0.11151826
+        
+        if self.env.lc_name == "xapian":
+            #R2 = 0.6699626573006099 
+            self.core_coef = 0.07149764
+            self.freq_coef = 0.14374043 / (10 ** 6) 
+            self.intercept = 0.05195069
+        
+        if self.env.lc_name == "mysql":
+            #R2 = 0.7930371570703644
+            self.core_coef = 0.06430502 
+            self.freq_coef = 0.13744261 / (10 ** 6) 
+            self.intercept = -0.19378322
+        
+
+
 
         if self.mode == "co-loc":
             self.actions.init_be()
@@ -123,12 +150,25 @@ class CoactPM:
     def manage_core_T(self):
         ########core_T control##########
         total_app_usage = 0
+        target_core = 0
+
         for app_usage in self.l_long_app_usage:
             #threshold violation
             total_app_usage += app_usage
-                
-        target_core = math.ceil((1 + self.margin) * total_app_usage / self.threshold / self.core_coef)
-        if target_core == 0:
+        
+        if self.opt == False:        
+            target_core = math.ceil((1 + self.margin) * total_app_usage / self.threshold )
+        else:
+            max_usage = max(self.l_long_app_usage)
+            slack_ratio = max_usage / self.threshold
+            req_core = (1/self.core_coef) \
+                        * (slack_ratio*(self.freq_coef*self.base_freq \
+                            + self.core_coef*self.env.core_T
+                            + self.intercept)\
+                        - self.freq_coef*self.base_freq - self.intercept)
+            target_core = math.ceil(req_core)
+
+        if target_core < 1:
             target_core = 1
 
         #dec
@@ -187,9 +227,11 @@ class CoactPM:
     def manage_freq(self):
         ##########freq control############
         overmax_freq_count = 0
+        req_freq = 0
         for core in range(self.env.max_core):
             next_freq = self.env.l_freq[0]
             next_freq_index = 0
+            slack_ratio = 0
 
             if self.is_alloc == False:
                 core_usage = (1 + self.freq_margin) * self.l_short_app_usage[core]
@@ -200,7 +242,16 @@ class CoactPM:
                 else:
                     slack_ratio = (core_usage / self.threshold) 
                 cur_freq = self.env.l_core_freq[core]
-                req_freq = cur_freq * slack_ratio * self.freq_coef
+                
+                if self.opt == False:
+                    req_freq = cur_freq * slack_ratio * self.freq_coef
+                else:
+                    req_freq = (1/self.freq_coef) \
+                                * (slack_ratio*(self.freq_coef*self.base_freq \
+                                    + self.core_coef*self.env.core_T
+                                    + self.intercept)\
+                                - self.core_coef*self.env.core_T - self.intercept)
+
 
                 if req_freq > self.env.l_freq[0]:
                     overmax_freq_count += 1
@@ -268,22 +319,25 @@ class CoactPM:
             #print(self.l_profile)
 
         #linear regression
-        if max_usage == 0:
+        if max_usage == 0 or rps < 100:
             return
 
-        x = [self.env.l_core_freq[max_index]/self.env.l_core_freq[0], self.env.core_T, 1/rps, 1]
-        y = [1 / max_usage]
-        self.lr.append_data(x,y)
+        data =  [self.env.core_T, self.env.core_P, self.env.l_core_freq[max_index]/ (10 ** 6) , rps, 1/max_usage, 0]
+        self.lr.append_data(data)
  
 
     def convert_usage(self,l_app_usage):
         l_converted_app_usage = list()
+        print("l_app_usage: ",l_app_usage)
         for cpu in range(self.env.max_core):
-            usage = self.core_coef * l_app_usage[cpu] * self.env.l_core_freq[cpu] / self.base_freq
+            usage = 0
+            if self.opt == False:
+                usage = l_app_usage[cpu] * self.env.l_core_freq[cpu] / self.base_freq
+            else:
+                usage = l_app_usage[cpu] \
+                 * (self.freq_coef*self.env.l_core_freq[cpu] + self.core_coef*self.env.core_T + self.intercept) \
+                     / (self.freq_coef*self.base_freq + self.core_coef*self.env.core_T + self.intercept) 
             l_converted_app_usage.append(usage)
         
         return l_converted_app_usage
 
-    def regression(self):
-
-        return
