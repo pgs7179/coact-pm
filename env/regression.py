@@ -5,17 +5,11 @@ from sklearn import linear_model
   
 class Linear_Regression:
     def __init__(self):
-        self.X = list() 
-        self.Y = list() 
-        self.coef = np.array([1, 1, 1, 1])
-        self.learning_rate = 0.01
-        self.itr = 0
-
         self.keys = ['thread_num','queue_num','freq','rps','rev_max_usage','norm_rps']
         self.df = pd.DataFrame(columns=self.keys)
         self.lr = linear_model.SGDRegressor(max_iter=10000)
         self.score = 0
-        self.coef = [1,1]
+        self.coef = [1,1,1]
         self.intercept = 0
         self.rps_gap=50
     
@@ -38,7 +32,7 @@ class Linear_Regression:
         result_df = df1['rev_max_usage'] / df2['rev_max_usage']   
         result_df = result_df.reset_index()      
 
-        X = result_df[["thread_num","freq"]].values.tolist()  
+        X = result_df[["thread_num","queue_num","freq"]].values.tolist()  
         y = result_df['rev_max_usage'].tolist()  
         self.lr.fit(X, y) 
 

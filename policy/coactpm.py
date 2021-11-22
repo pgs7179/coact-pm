@@ -100,7 +100,7 @@ class CoactPM:
                     print("long_usage: ", self.l_long_app_usage[:self.env.max_core]) 
                     print("be core: ", self.env.be_core)
                 core_T, core_P = self.manage_core_T()
-                core_T, core_P = self.manage_core_P(core_T, core_P)
+                #core_T, core_P = self.manage_core_P(core_T, core_P)
 
                 self.alloc_core(core_T, core_P)
                 if core_T > self.env.max_core:
@@ -160,9 +160,11 @@ class CoactPM:
             target_core = math.ceil((1 + self.margin) * total_app_usage / self.threshold )
         else:
             max_usage = max(self.l_long_app_usage)
+            max_core_index = self.l_long_app_usage.index(max_usage)
+            cur_freq = self.env_l_core_freq[max_core_index]
             slack_ratio = max_usage / self.threshold
             req_core = (1/self.core_coef) \
-                        * (slack_ratio*(self.freq_coef*self.base_freq \
+                        * (slack_ratio*(self.freq_coef*cur_freq \
                             + self.core_coef*self.env.core_T
                             + self.intercept)\
                         - self.freq_coef*self.base_freq - self.intercept)
@@ -218,15 +220,20 @@ class CoactPM:
 
         l_app_usage_TP = self.l_long_app_usage[:self.env.core_P]
         usage_TP = sum(l_app_usage_TP) / self.env.core_P
-        if (1 + self.margin) * usage_TP < self.threshold and core_P != 1:
-            core_P -= 1
+
+        if self.opt == False:        
+            if (1 + self.margin) * usage_TP < self.threshold and core_P != 1:
+                core_P -= 1
+        else:
+            #TODO
+            core_P = core_P
+
 
 
         return core_T, core_P
 
     def manage_freq(self):
         ##########freq control############
-        overmax_freq_count = 0
         req_freq = 0
         for core in range(self.env.max_core):
             next_freq = self.env.l_freq[0]
@@ -252,9 +259,6 @@ class CoactPM:
                                     + self.intercept)\
                                 - self.core_coef*self.env.core_T - self.intercept)
 
-
-                if req_freq > self.env.l_freq[0]:
-                    overmax_freq_count += 1
 
                 reversed_l_freq = self.env.l_freq[::-1]
                 for freq in reversed_l_freq:
