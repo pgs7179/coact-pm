@@ -161,7 +161,7 @@ class CoactPM:
         else:
             max_usage = max(self.l_long_app_usage)
             max_core_index = self.l_long_app_usage.index(max_usage)
-            cur_freq = self.env_l_core_freq[max_core_index]
+            cur_freq = self.env.l_core_freq[max_core_index]
             slack_ratio = max_usage / self.threshold
             req_core = (1/self.core_coef) \
                         * (slack_ratio*(self.freq_coef*cur_freq \
